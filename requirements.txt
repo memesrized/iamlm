@@ -5,6 +5,13 @@
 click
 awscli
 flake8
-yapf
+black
 tqdm
 python-dotenv>=0.5.1
+segtok==1.5.9
+
+nltk==3.5
+beautifulsoup4==4.9.0
+polyglot==16.7.4
+pyicu==2.4.3
+pycld2==0.41
