@@ -1,7 +1,7 @@
 import codecs
 import json
 import re
-from abc import abstractmethod
+from abc import abstractmethod, ABC
 from collections import defaultdict
 from pathlib import Path
 
@@ -13,7 +13,7 @@ from tqdm import tqdm
 from src.preprocessing import steps
 
 
-class SocialNetwork:
+class SocialNetwork(ABC):
     # TODO: define additional preprocessing step with pass (?)
     def __init__(self, path, name, n_gram, ignore, **kwargs):
         self.path = path
@@ -33,15 +33,10 @@ class SocialNetwork:
         main_dict = defaultdict(dict)
         for record in self.messages_list:
             tokenized = word_tokenizer(record)
+            tokenized.insert(0, "<start_token>")
+            tokenized.append("<end_token>")
             # TODO: find a better way to insert start/end tokens
-            n_gramed = ngrams(
-                tokenized,
-                self.n_gram,
-                pad_left=True,
-                pad_right=True,
-                left_pad_symbol="<start_token>",
-                right_pad_symbol="<end_token>",
-            )
+            n_gramed = ngrams(tokenized, self.n_gram)
             for n_gram in n_gramed:
                 # instead of counter, so we iterate over only once
                 # but with if statement
@@ -64,11 +59,29 @@ class SocialNetwork:
         self._n_grams()
         return self
 
+    def _transform_to_save(self, lm_dict):
+        return [{"key": k, "value": v} for k, v in lm_dict.items()]
+
+    def _transform_to_load(self, lm_dict):
+        return {tuple(x["key"]): x["value"] for x in lm_dict}
+
     def save(self, path, path_list):
         with open(path, "w") as file_:
-            json.dump(self.lm_dict, file_, ensure_ascii=False, indent=4)
+            json.dump(
+                self._transform_to_save(self.lm_dict),
+                file_,
+                ensure_ascii=False,
+                indent=4,
+            )
         with open(path_list, "w") as file_:
             json.dump(self.messages_list, file_, ensure_ascii=False, indent=4)
+
+    @classmethod
+    def load(cls, path):
+        instance = cls(1, 1, 1, 1)
+        with open(path) as file_:
+            instance.lm_dict = instance._transform_to_load(json.load(file_))
+        return instance
 
 
 class Telegram(SocialNetwork):
