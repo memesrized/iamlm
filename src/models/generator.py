@@ -1,12 +1,17 @@
+import json
+from copy import deepcopy
+
 import numpy as np
 from compress_fasttext.models import CompressedFastTextKeyedVectors
 from numpy.random import randint
-from copy import deepcopy
+from src import PROJECT_PATHS
 
 
 class Generator:
     def __init__(self, embeddings):
         self.embeddings = CompressedFastTextKeyedVectors.load(str(embeddings))
+        with open(PROJECT_PATHS.configs / "filthy_words.json") as file:
+            self.filthy_words = [self._get_embeddings(x) for x in json.load(file)]
 
     def _get_next_n_gram(self, seq, dict_, context=None, beam_size=1):
         # TODO: similarity based on seq itself
@@ -62,7 +67,9 @@ class Generator:
             }
             for x in range(beam_size)
         ]
-        if context:
+        if not context:
+            context = self._calculate_mean_vec(self.filthy_words) * (-1)
+        else:
             context = self._calculate_mean_vec(context)
 
         result = []
@@ -159,3 +166,12 @@ class Generator:
 
     def _normalize_string(self, text):
         return text.replace("ё", "е")
+
+    def _get_embeddings(self, word):
+        return self.embeddings[self._normalize_string(word)]
+
+    def _filthy_words_distance(self, word):
+        distances = []
+        word_emb = self.embeddings[self._normalize_string(word)]
+        for word in self.filthy_words:
+            distances.append(self._calculate_sim(word_emb, ))
